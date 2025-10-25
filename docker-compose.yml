@@ -1,0 +1,19 @@
+services:
+  grepdb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: grepdb-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data_volume_dir:/app/data_volume_dir
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      - RUST_LOG=info
+      - RUST_BACKTRACE=1
+    restart: unless-stopped
+
+volumes:
+  grepdb-data:
+    driver: local

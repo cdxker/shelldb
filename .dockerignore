@@ -1,0 +1,36 @@
+# Git files
+.git
+.gitignore
+
+# Build artifacts
+target/
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data directory (don't include local data in image)
+data_volume_dir/
+
+# Documentation
+*.md
+!README.md
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Test output
+test-results/
+coverage/
