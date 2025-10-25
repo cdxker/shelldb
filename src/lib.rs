@@ -92,6 +92,61 @@ async fn search(
     Ok(HttpResponse::Ok().body(result))
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct TagsResponse {
+    /// List of available tags for the dataset
+    pub tags: Vec<String>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/{dataset}/tags",
+    params(
+        ("dataset" = uuid::Uuid, Path, description = "The UUID of the dataset")
+    ),
+    responses(
+        (status = 200, description = "Tags returned successfully", body = TagsResponse),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Search"
+)]
+async fn get_all_tags(
+    dataset_id: web::Path<uuid::Uuid>,
+    config: web::Data<Config>,
+) -> Result<HttpResponse> {
+    let dataset_path = format!("{}/{}", config.data_volume_dir, dataset_id);
+
+    // Read directory entries
+    let entries = match fs::read_dir(&dataset_path) {
+        Ok(entries) => entries,
+        Err(_) => {
+            // Dataset directory doesn't exist, return empty list
+            return Ok(HttpResponse::Ok().json(TagsResponse { tags: vec![] }));
+        }
+    };
+
+    // Filter for directories starting with "___"
+    let mut tags = Vec::new();
+    for entry in entries {
+        if let Ok(entry) = entry {
+            if let Ok(metadata) = entry.metadata() {
+                if metadata.is_dir() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        if name.starts_with("___") {
+                            // Strip the "___" prefix from the tag name
+                            tags.push(name[3..].to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    tags.sort();
+
+    Ok(HttpResponse::Ok().json(TagsResponse { tags }))
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct GrepIndexPayload {
     /// The UUID of the dataset to index into
@@ -101,7 +156,7 @@ pub struct GrepIndexPayload {
     /// The content of the file
     pub file_payload: String,
     /// Tags for nested storage (e.g., ["private", "user_auth"])
-    pub nested: Vec<String>,
+    pub tags: Vec<String>,
 }
 
 #[utoipa::path(
@@ -121,42 +176,27 @@ async fn index(
     let dataset = payload.dataset.to_string();
     let base_path = format!("{}/{}", config.data_volume_dir, dataset);
 
-    // Create the base dataset directory
     fs::create_dir_all(&base_path).expect("Failed to create dataset directory");
 
-    // Determine storage paths based on nested tags
     let mut storage_paths = Vec::new();
-    let has_private = payload.nested.contains(&"private".to_string());
-    let has_user_auth = payload.nested.contains(&"user_auth".to_string());
 
-    if has_private {
-        let private_path = format!("{}/___private", base_path);
-        fs::create_dir_all(&private_path).expect("Failed to create private directory");
-        storage_paths.push(format!("{}/{}", private_path, payload.filename));
+    for tag in payload.tags.iter() {
+        let tagged_path = format!("{base_path}/___{tag}");
+        fs::create_dir_all(&tagged_path).expect("Failed to create private directory");
+        storage_paths.push(format!("{}/{}", tagged_path, payload.filename));
     }
 
-    if has_user_auth {
-        let user_auth_path = format!("{}/___user_auth", base_path);
-        fs::create_dir_all(&user_auth_path).expect("Failed to create user_auth directory");
-        storage_paths.push(format!("{}/{}", user_auth_path, payload.filename));
-    }
-
-    // If no special tags, store in base directory
     if storage_paths.is_empty() {
         storage_paths.push(format!("{}/{}", base_path, payload.filename));
     }
 
-    // Write the file content to all determined paths
     for path in storage_paths {
-        // Create parent directory if it doesn't exist
         if let Some(parent) = Path::new(&path).parent() {
             fs::create_dir_all(parent).expect("Failed to create parent directory");
         }
 
         fs::write(&path, &payload.file_payload)
             .unwrap_or_else(|e| panic!("Failed to write file to {}: {}", path, e));
-
-        println!("Indexed file to: {}", path);
     }
 
     Ok(HttpResponse::Ok().body("File indexed successfully"))
@@ -170,8 +210,8 @@ pub struct Config {
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(search, index),
-    components(schemas(GrepSearchPayload, GrepIndexPayload)),
+    paths(search, index, get_all_tags),
+    components(schemas(GrepSearchPayload, GrepIndexPayload, TagsResponse)),
     tags(
         (name = "Search", description = "Search operations on indexed data"),
         (name = "Index", description = "Index new files into datasets")
@@ -233,10 +273,11 @@ pub async fn start_server() -> std::io::Result<()> {
         App::new().app_data(config_data.clone()).service(
             web::scope("/api")
                 .route("/search", web::post().to(search))
+                .route("/{dataset}/tags", web::get().to(get_all_tags))
                 .route("/index", web::post().to(index)),
         )
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }

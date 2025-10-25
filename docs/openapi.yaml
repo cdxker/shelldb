@@ -74,6 +74,41 @@
           }
         }
       }
+    },
+    "/api/{dataset}/tags": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "operationId": "get_all_tags",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "path",
+            "description": "The UUID of the dataset",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tags returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -84,7 +119,7 @@
           "dataset",
           "filename",
           "file_payload",
-          "nested"
+          "tags"
         ],
         "properties": {
           "dataset": {
@@ -100,7 +135,7 @@
             "type": "string",
             "description": "The filename to store"
           },
-          "nested": {
+          "tags": {
             "type": "array",
             "items": {
               "type": "string"
@@ -132,6 +167,21 @@
               "type": "string"
             },
             "description": "Optional folders to filter the search (e.g., [\"___private\", \"___user_auth\"])"
+          }
+        }
+      },
+      "TagsResponse": {
+        "type": "object",
+        "required": [
+          "tags"
+        ],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of available tags for the dataset"
           }
         }
       }
