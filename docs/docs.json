@@ -16,8 +16,7 @@
           {
             "group": "Getting started",
             "pages": [
-              "index",
-              "quickstart"
+              "index"
             ]
           },
           {
@@ -25,12 +24,13 @@
             "openapi": "openapi.yaml",
             "pages": [
               "POST /api/index",
-              "POST /api/search"
+              "POST /api/search",
+              "GET /api/{dataset}/tags"
             ]
           }
         ]
       }
-    ],
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",

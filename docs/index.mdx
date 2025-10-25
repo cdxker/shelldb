@@ -5,55 +5,86 @@ description: "Welcome to ShellDB the database for "
 
 ## What is Shell DB?
 
-ShellDB is a database to proxy shell commands through.
+ShellDB is a file database that can process shell commands.
 
-## Setting up
+Currently supported features:
+- `grep`
+- `ls` Coming soon
+- `awk` Coming soon
 
+ShellDB additionally supports file `tagging`.
 
-## Make it yours
+Tagging a file allows for building complex `filter`s that join multiple tags together.
 
+## Running ShellDB
 
-## Create beautiful pages
+```
+docker run cdxker/shelldb -p 8080:8080
+```
 
-Everything you need to create world-class documentation.
+## Architecture
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+- Files are stored within `${dataDir}/dataset_id/path/to/file`
+- Tagged files are files are stored within `${dataDir}/dataset_id/___tag/path/to/file`
 
-## Need inspiration?
+## Indexing files
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+To index a file with ShellDB use the [`index`](/api-reference/index/post-apiindex) route, sending the full file as a payload.
+
+The `dataseet` field is the `index` you will be adding it into, if the `index` doesn't exist, one will be auto created for you.
+
+```sh
+ curl -X POST http://127.0.0.1:8080/api/index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset": "550e8400-e29b-41d4-a716-446655440000",
+    "filename": "test.txt",
+    "file_payload": "override",
+    "tags": []
+  }'
+```
+
+### Adding Tags
+
+```sh
+ curl -X POST http://127.0.0.1:8080/api/index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset": "550e8400-e29b-41d4-a716-446655440000",
+    "filename": "test.txt",
+    "file_payload": "override",
+    "tags": []
+  }'
+```
+
+### Indexing files from Github
+
+Coming Soon
+
+## Searching
+
+```sh
+curl -X POST http://127.0.0.1:8080/api/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset": "550e8400-e29b-41d4-a716-446655440000",
+    "flags": "-r hello",
+    "tags": []
+  }'
+```
+
+### Search filters
+
+Filtering is currently only supported by tags. 
+
+To filter with a tag send a list of tags like this
+
+```sh
+curl -X POST http://127.0.0.1:8080/api/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset": "550e8400-e29b-41d4-a716-446655440000",
+    "flags": "-r private -U",
+    "tags": ["private"]
+  }'
+```
