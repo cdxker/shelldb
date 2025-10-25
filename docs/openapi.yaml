@@ -1,0 +1,150 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GrepDB API",
+    "description": "A database for grepping - search indexed content with grep-like functionality",
+    "license": {
+      "name": "MIT"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/index": {
+      "post": {
+        "tags": [
+          "Index"
+        ],
+        "operationId": "index",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrepIndexPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "File indexed successfully",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "operationId": "search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrepSearchPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Search results returned successfully",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GrepIndexPayload": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "filename",
+          "file_payload",
+          "nested"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the dataset to index into"
+          },
+          "file_payload": {
+            "type": "string",
+            "description": "The content of the file"
+          },
+          "filename": {
+            "type": "string",
+            "description": "The filename to store"
+          },
+          "nested": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags for nested storage (e.g., [\"private\", \"user_auth\"])"
+          }
+        }
+      },
+      "GrepSearchPayload": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "flags",
+          "folder_filter"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The UUID of the dataset to search"
+          },
+          "flags": {
+            "type": "string",
+            "description": "Grep flags to use (e.g., \"-r -n pattern\")"
+          },
+          "folder_filter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional folders to filter the search (e.g., [\"___private\", \"___user_auth\"])"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Search",
+      "description": "Search operations on indexed data"
+    },
+    {
+      "name": "Index",
+      "description": "Index new files into datasets"
+    }
+  ]
+}
