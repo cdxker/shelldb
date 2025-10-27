@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GrepDB Chat Interface</title>
+    <title>GrepDB Interface - AI Assistant & Direct Search</title>
     <style>
         * {
             margin: 0;
@@ -18,13 +18,9 @@
             min-height: 100vh;
         }
 
-        .container {
-            max-width: 900px;
+        .main-container {
+            max-width: 1600px;
             margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
         }
 
         .header {
@@ -32,6 +28,8 @@
             color: white;
             padding: 20px;
             text-align: center;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
@@ -44,19 +42,13 @@
             font-size: 14px;
         }
 
-        .chat-container {
-            padding: 20px;
-        }
-
         .status-bar {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
             display: flex;
             gap: 10px;
             align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .status-indicator {
@@ -79,7 +71,34 @@
             font-size: 13px;
         }
 
-        .chat-messages {
+        .columns-container {
+            display: flex;
+            gap: 20px;
+            background: white;
+            min-height: 600px;
+        }
+
+        .column {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .column-left {
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .column-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .chat-messages, .grep-results {
             height: 400px;
             overflow-y: auto;
             border: 1px solid #e5e7eb;
@@ -87,6 +106,22 @@
             padding: 16px;
             background: #fafafa;
             margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .grep-results {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .grep-result-line {
+            padding: 2px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .grep-result-line:hover {
+            background: #f9f9f9;
         }
 
         .message {
@@ -143,10 +178,10 @@
         .input-container {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
-        .chat-input {
+        .chat-input, .grep-input {
             flex: 1;
             padding: 12px;
             border: 1px solid #d1d5db;
@@ -155,13 +190,17 @@
             transition: border-color 0.2s;
         }
 
-        .chat-input:focus {
+        .grep-input {
+            font-family: monospace;
+        }
+
+        .chat-input:focus, .grep-input:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .send-btn {
+        .send-btn, .search-btn {
             padding: 12px 24px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -173,39 +212,43 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .send-btn:hover {
+        .search-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .send-btn:hover, .search-btn:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
-        .send-btn:active {
+        .send-btn:active, .search-btn:active {
             transform: translateY(0);
         }
 
         .quick-actions {
             border-top: 1px solid #e5e7eb;
-            padding-top: 20px;
+            padding-top: 15px;
         }
 
         .quick-actions h3 {
-            font-size: 14px;
+            font-size: 13px;
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .action-buttons {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
         .action-btn {
-            padding: 8px 16px;
+            padding: 6px 12px;
             border: none;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
@@ -236,13 +279,54 @@
             color: white;
         }
 
-        .footer {
+        .grep-template-btn {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .folder-filters {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+        }
+
+        .folder-filter {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .folder-filter input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .grep-help {
             background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .grep-help code {
+            background: #e5e7eb;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .footer {
+            background: white;
             padding: 16px 20px;
             text-align: center;
             color: #6b7280;
             font-size: 12px;
             border-top: 1px solid #e5e7eb;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
         .footer a {
@@ -255,75 +339,153 @@
         }
 
         /* Scrollbar styling */
-        .chat-messages::-webkit-scrollbar {
+        .chat-messages::-webkit-scrollbar, .grep-results::-webkit-scrollbar {
             width: 8px;
         }
 
-        .chat-messages::-webkit-scrollbar-track {
+        .chat-messages::-webkit-scrollbar-track, .grep-results::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 4px;
         }
 
-        .chat-messages::-webkit-scrollbar-thumb {
+        .chat-messages::-webkit-scrollbar-thumb, .grep-results::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
         }
 
-        .chat-messages::-webkit-scrollbar-thumb:hover {
+        .chat-messages::-webkit-scrollbar-thumb:hover, .grep-results::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
+        }
+
+        @media (max-width: 1024px) {
+            .columns-container {
+                flex-direction: column;
+            }
+            .column-left {
+                border-right: none;
+                border-bottom: 1px solid #e5e7eb;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="main-container">
         <div class="header">
-            <h1>🔍 GrepDB Chat Interface</h1>
-            <p>Search your indexed files using natural language with AI assistance</p>
+            <h1>🔍 GrepDB Interface</h1>
+            <p>AI-powered chat assistant and direct grep search</p>
         </div>
 
-        <div class="chat-container">
-            <div class="status-bar">
-                <span class="status-indicator" id="status-indicator"></span>
-                <span style="font-size: 13px; color: #6b7280;">Dataset UUID:</span>
-                <input
-                    type="text"
-                    id="dataset-uuid"
-                    class="uuid-input"
-                    placeholder="Enter UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)"
-                    value="550e8400-e29b-41d4-a716-446655440000"
-                />
+        <div class="status-bar">
+            <span class="status-indicator" id="status-indicator"></span>
+            <span style="font-size: 13px; color: #6b7280;">Dataset UUID:</span>
+            <input
+                type="text"
+                id="dataset-uuid"
+                class="uuid-input"
+                placeholder="Enter UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)"
+                value="550e8400-e29b-41d4-a716-446655440000"
+            />
+        </div>
+
+        <div class="columns-container">
+            <!-- Left Column: AI Assistant -->
+            <div class="column column-left">
+                <div class="column-header">💬 AI Assistant</div>
+
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message system">Welcome to GrepDB Chat! Enter your dataset UUID and start chatting.</div>
+                </div>
+
+                <div class="input-container">
+                    <input
+                        type="text"
+                        id="chat-input"
+                        class="chat-input"
+                        placeholder="Ask about your indexed files..."
+                        onkeypress="if(event.key === 'Enter') sendMessage()"
+                    />
+                    <button class="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+
+                <div class="quick-actions">
+                    <h3>Quick Actions</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn index" onclick="indexSampleFiles()">
+                            📁 Index Samples
+                        </button>
+                        <button class="action-btn search" onclick="searchForErrors()">
+                            🔴 Find Errors
+                        </button>
+                        <button class="action-btn function" onclick="searchForFunctions()">
+                            📦 Find Functions
+                        </button>
+                        <button class="action-btn clear" onclick="clearChat()">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div class="chat-messages" id="chat-messages">
-                <div class="message system">Welcome to GrepDB Chat! Enter your dataset UUID and start chatting.</div>
-            </div>
+            <!-- Right Column: Direct Grep Search -->
+            <div class="column column-right">
+                <div class="column-header">🔎 Direct Grep Search</div>
 
-            <div class="input-container">
-                <input
-                    type="text"
-                    id="chat-input"
-                    class="chat-input"
-                    placeholder="Ask about your indexed files..."
-                    onkeypress="if(event.key === 'Enter') sendMessage()"
-                />
-                <button class="send-btn" onclick="sendMessage()">Send Message</button>
-            </div>
+                <div class="folder-filters">
+                    <label class="folder-filter">
+                        <input type="checkbox" id="filter-all" checked onchange="updateFolderFilters()">
+                        <span>All Files</span>
+                    </label>
+                    <label class="folder-filter">
+                        <input type="checkbox" id="filter-private" onchange="updateFolderFilters()">
+                        <span>___private</span>
+                    </label>
+                    <label class="folder-filter">
+                        <input type="checkbox" id="filter-user-auth" onchange="updateFolderFilters()">
+                        <span>___user_auth</span>
+                    </label>
+                </div>
 
-            <div class="quick-actions">
-                <h3>Quick Actions</h3>
-                <div class="action-buttons">
-                    <button class="action-btn index" onclick="indexSampleFiles()">
-                        📁 Index Sample Files
-                    </button>
-                    <button class="action-btn search" onclick="searchForErrors()">
-                        🔴 Search for Errors
-                    </button>
-                    <button class="action-btn function" onclick="searchForFunctions()">
-                        📦 Find Functions
-                    </button>
-                    <button class="action-btn clear" onclick="clearChat()">
-                        🗑️ Clear Chat
-                    </button>
+                <div class="input-container">
+                    <input
+                        type="text"
+                        id="grep-input"
+                        class="grep-input"
+                        placeholder="Enter grep command (e.g., -r -n error)"
+                        onkeypress="if(event.key === 'Enter') executeDirectGrep()"
+                    />
+                    <button class="search-btn" onclick="executeDirectGrep()">Search</button>
+                </div>
+
+                <div class="grep-results" id="grep-results">
+                    <div style="color: #9ca3af; text-align: center; padding: 20px;">
+                        Grep results will appear here...
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <h3>Command Templates</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn grep-template-btn" onclick="setGrepCommand('-r -n error')">
+                            Errors (-r -n)
+                        </button>
+                        <button class="action-btn grep-template-btn" onclick="setGrepCommand('-r -i function')">
+                            Functions (-r -i)
+                        </button>
+                        <button class="action-btn grep-template-btn" onclick="setGrepCommand('-r -c console')">
+                            Count (-r -c)
+                        </button>
+                        <button class="action-btn grep-template-btn" onclick="setGrepCommand('-r TODO')">
+                            TODOs
+                        </button>
+                        <button class="action-btn clear" onclick="clearGrepResults()">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grep-help">
+                    <strong>Common flags:</strong> <code>-r</code> recursive, <code>-n</code> line numbers,
+                    <code>-i</code> case-insensitive, <code>-c</code> count, <code>-v</code> invert match
                 </div>
             </div>
         </div>
@@ -341,6 +503,7 @@
         const SERVER_URL = 'http://localhost:3002';
         const GREPDB_URL = 'http://localhost:8080';
 
+        // AI Assistant functions
         function addMessage(content, type = 'assistant') {
             const messagesDiv = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
@@ -499,6 +662,111 @@
             messagesDiv.innerHTML = '<div class="message system">Chat cleared. Ready for new conversation!</div>';
         }
 
+        // Direct Grep Search functions
+        async function executeDirectGrep() {
+            const datasetUuid = document.getElementById('dataset-uuid').value;
+            const grepCommand = document.getElementById('grep-input').value.trim();
+            const resultsDiv = document.getElementById('grep-results');
+
+            if (!datasetUuid) {
+                resultsDiv.innerHTML = '<div style="color: #dc2626; padding: 10px;">Please enter a Dataset UUID first!</div>';
+                return;
+            }
+
+            if (!grepCommand) {
+                resultsDiv.innerHTML = '<div style="color: #dc2626; padding: 10px;">Please enter a grep command!</div>';
+                return;
+            }
+
+            // Get folder filters
+            const folderFilter = [];
+            const filterAll = document.getElementById('filter-all').checked;
+            const filterPrivate = document.getElementById('filter-private').checked;
+            const filterUserAuth = document.getElementById('filter-user-auth').checked;
+
+            // If not "All Files" and specific folders are selected, add them to filter
+            if (!filterAll) {
+                if (filterPrivate) folderFilter.push('___private');
+                if (filterUserAuth) folderFilter.push('___user_auth');
+            }
+
+            resultsDiv.innerHTML = '<div style="color: #6b7280; padding: 10px;">Searching...</div>';
+
+            try {
+                const requestBody = {
+                    dataset: datasetUuid,
+                    flags: grepCommand,
+                    folder_filter: folderFilter
+                };
+
+                console.log('Direct grep request:', requestBody);
+
+                const response = await fetch(`${GREPDB_URL}/api/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`GrepDB error: ${response.status} - ${errorText}`);
+                }
+
+                const result = await response.text();
+
+                if (result.trim()) {
+                    // Format the results with syntax highlighting
+                    const lines = result.split('\n');
+                    const formattedLines = lines.map(line => {
+                        // Basic syntax highlighting for file paths and line numbers
+                        if (line.includes(':')) {
+                            const parts = line.split(':');
+                            if (parts.length >= 2) {
+                                const filePath = parts[0];
+                                const rest = parts.slice(1).join(':');
+                                return `<span style="color: #059669; font-weight: bold;">${escapeHtml(filePath)}</span>:<span>${escapeHtml(rest)}</span>`;
+                            }
+                        }
+                        return escapeHtml(line);
+                    }).join('\n');
+
+                    resultsDiv.innerHTML = formattedLines;
+                } else {
+                    resultsDiv.innerHTML = '<div style="color: #9ca3af; padding: 10px;">No matches found.</div>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="color: #dc2626; padding: 10px;">Error: ${error.message}</div>`;
+            }
+        }
+
+        function setGrepCommand(command) {
+            document.getElementById('grep-input').value = command;
+            document.getElementById('grep-input').focus();
+        }
+
+        function clearGrepResults() {
+            document.getElementById('grep-results').innerHTML = '<div style="color: #9ca3af; text-align: center; padding: 20px;">Grep results will appear here...</div>';
+            document.getElementById('grep-input').value = '';
+        }
+
+        function updateFolderFilters() {
+            const filterAll = document.getElementById('filter-all');
+            const filterPrivate = document.getElementById('filter-private');
+            const filterUserAuth = document.getElementById('filter-user-auth');
+
+            if (filterAll.checked) {
+                filterPrivate.checked = false;
+                filterUserAuth.checked = false;
+                filterPrivate.disabled = true;
+                filterUserAuth.disabled = true;
+            } else {
+                filterPrivate.disabled = false;
+                filterUserAuth.disabled = false;
+            }
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -530,12 +798,13 @@
             grepdbStatusEl.style.color = '#6b7280';
         }
 
-        // Check server status on load
+        // Initialize on load
         window.addEventListener('DOMContentLoaded', () => {
             checkServerStatus();
             addMessage('Welcome! This chat interface connects to your local GrepDB server.', 'system');
             addMessage('Make sure your server is running on port 3002 with a valid Anthropic API key.', 'system');
-            addMessage('Click "Index Sample Files" to add some test data, then start chatting!', 'system');
+            addMessage('Click "Index Samples" to add test data, then start chatting!', 'system');
+            updateFolderFilters(); // Set initial state of folder filters
         });
 
         // Check server status every 30 seconds

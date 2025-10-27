@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{App, HttpResponse, HttpServer, Result, web};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
@@ -270,12 +271,18 @@ pub async fn start_server() -> std::io::Result<()> {
     fs::write("docs/openapi.yaml", openapi_json).expect("Failed to write openapi_json");
 
     HttpServer::new(move || {
-        App::new().app_data(config_data.clone()).service(
-            web::scope("/api")
-                .route("/search", web::post().to(search))
-                .route("/{dataset}/tags", web::get().to(get_all_tags))
-                .route("/index", web::post().to(index)),
-        )
+        // Configure CORS - very permissive for local development
+        let cors = Cors::permissive();
+
+        App::new()
+            .wrap(cors)
+            .app_data(config_data.clone())
+            .service(
+                web::scope("/api")
+                    .route("/search", web::post().to(search))
+                    .route("/{dataset}/tags", web::get().to(get_all_tags))
+                    .route("/index", web::post().to(index)),
+            )
     })
     .bind(("0.0.0.0", 8080))?
     .run()
