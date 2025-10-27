@@ -1,0 +1,96 @@
+---
+title: Quickstart Guide
+description: How to integrate GrepDB's file indexing and search capabilities into your application
+---
+
+## Indexing Files into GrepDB
+
+GrepDB stores files in a hierarchical directory structure per dataset. Use the `/api/index` endpoint to store files with optional tag-based routing.
+
+```typescript
+// Index multiple files by calling the endpoint for each file
+const files = [
+  {
+    filename: 'utils.js',
+    content: 'handleError(err) {...}',
+    tags: ['private']
+  },
+  {
+    filename: 'config.json',
+    content: '{"debug": true}',
+    tags: ['user_auth']
+  }
+  {
+    filename: 'my/nested/file/file.json',
+    content: '{"debug": true}',
+    tags: []
+  }
+];
+
+for (const file of files) {
+  await fetch('http://localhost:8080/api/index', {
+    method: 'POST',
+    body: JSON.stringify({
+      dataset: uuid,
+      filename: file.filename,
+      file_payload: file.content,
+      nested: file.tags
+    })
+  });
+}
+```
+
+## Searching with GrepDB
+
+Use the `/api/search` endpoint to run grep commands on your indexed files. The `folder_filter` field is required but can be empty to search all directories.
+
+```typescript
+// POST http://localhost:8080/api/search
+const searchResponse = await fetch('http://localhost:8080/api/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    dataset: '550e8400-e29b-41d4-a716-446655440000',
+    flags: '-i -r error',   // Any grep flags except the grep command itself
+    folder_filter: []        // Required: [] searches all, or specify ['___{tag}']
+  })
+});
+
+// Response is plain text with grep results:
+const results = await searchResponse.text();
+// data_volume_dir/550e8400-.../app.js:function test() { console.error("Error occurred"); }
+// 550e8400-.../___private/utils.js:handleError(err) {...}
+```
+
+### Common grep patterns
+
+```javascript
+// Case-insensitive search
+{ flags: '-i searchterm', folder_filter: [] }
+
+// Search with line numbers
+{ flags: '-n -r function', folder_filter: [] }
+
+// Count matches per file
+{ flags: '-c -r TODO', folder_filter: [] }
+
+// Search only in specific directories
+{ flags: '-r error', folder_filter: ['___private', '___user_auth'] }
+
+// Inverse match (lines NOT containing pattern)
+{ flags: '-v -r debug', folder_filter: [] }
+
+// Show 3 lines AFTER each match (context)
+{ flags: '-A 3 -r error', folder_filter: [] }
+
+// Show 2 lines BEFORE each match (context)
+{ flags: '-B 2 -r function', folder_filter: [] }
+
+// Show 2 lines BEFORE and AFTER each match
+{ flags: '-B 2 -A 2 -r handleError', folder_filter: [] }
+// Or use -C for same number before/after
+{ flags: '-C 2 -r handleError', folder_filter: [] }
+
+// Combine with case-insensitive and line numbers
+{ flags: '-i -n -A 5 -r exception', folder_filter: [] }
+```

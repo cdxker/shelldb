@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrepDB Chat Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .chat-container {
+            padding: 20px;
+        }
+
+        .status-bar {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-indicator.error {
+            background: #ef4444;
+        }
+
+        .uuid-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fafafa;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: 20%;
+            text-align: right;
+        }
+
+        .message.assistant {
+            background: white;
+            border: 1px solid #e5e7eb;
+            margin-right: 20%;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }
+
+        .message.system {
+            background: #f3f4f6;
+            color: #6b7280;
+            font-style: italic;
+            text-align: center;
+            margin: 0 10%;
+        }
+
+        .message pre {
+            background: #1f2937;
+            color: #d1d5db;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-btn:active {
+            transform: translateY(0);
+        }
+
+        .quick-actions {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 20px;
+        }
+
+        .quick-actions h3 {
+            font-size: 14px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-btn.index {
+            background: #10b981;
+            color: white;
+        }
+
+        .action-btn.search {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .action-btn.function {
+            background: #ec4899;
+            color: white;
+        }
+
+        .action-btn.clear {
+            background: #6b7280;
+            color: white;
+        }
+
+        .footer {
+            background: #f9fafb;
+            padding: 16px 20px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 GrepDB Chat Interface</h1>
+            <p>Search your indexed files using natural language with AI assistance</p>
+        </div>
+
+        <div class="chat-container">
+            <div class="status-bar">
+                <span class="status-indicator" id="status-indicator"></span>
+                <span style="font-size: 13px; color: #6b7280;">Dataset UUID:</span>
+                <input
+                    type="text"
+                    id="dataset-uuid"
+                    class="uuid-input"
+                    placeholder="Enter UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)"
+                    value="550e8400-e29b-41d4-a716-446655440000"
+                />
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <div class="message system">Welcome to GrepDB Chat! Enter your dataset UUID and start chatting.</div>
+            </div>
+
+            <div class="input-container">
+                <input
+                    type="text"
+                    id="chat-input"
+                    class="chat-input"
+                    placeholder="Ask about your indexed files..."
+                    onkeypress="if(event.key === 'Enter') sendMessage()"
+                />
+                <button class="send-btn" onclick="sendMessage()">Send Message</button>
+            </div>
+
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    <button class="action-btn index" onclick="indexSampleFiles()">
+                        📁 Index Sample Files
+                    </button>
+                    <button class="action-btn search" onclick="searchForErrors()">
+                        🔴 Search for Errors
+                    </button>
+                    <button class="action-btn function" onclick="searchForFunctions()">
+                        📦 Find Functions
+                    </button>
+                    <button class="action-btn clear" onclick="clearChat()">
+                        🗑️ Clear Chat
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>
+                Server: <strong id="server-status">Checking...</strong> |
+                GrepDB: <strong id="grepdb-status">Checking...</strong> |
+                <a href="#" onclick="checkServerStatus(); return false;">Refresh Status</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3002';
+        const GREPDB_URL = 'http://localhost:8080';
+
+        function addMessage(content, type = 'assistant') {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const datasetUuid = document.getElementById('dataset-uuid').value;
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            if (!datasetUuid) {
+                addMessage('Please enter a Dataset UUID first!', 'error');
+                return;
+            }
+
+            // Validate UUID format
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(datasetUuid)) {
+                addMessage('Invalid UUID format! Please enter a valid UUID.', 'error');
+                return;
+            }
+
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/assistant`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataset_uuid: datasetUuid,
+                        message: message
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantMessage = '';
+                let messageDiv = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+
+                                if (data.type === 'text') {
+                                    assistantMessage += data.content;
+                                    if (!messageDiv) {
+                                        messageDiv = document.createElement('div');
+                                        messageDiv.className = 'message assistant';
+                                        document.getElementById('chat-messages').appendChild(messageDiv);
+                                    }
+                                    messageDiv.innerHTML = assistantMessage;
+                                    document.getElementById('chat-messages').scrollTop =
+                                        document.getElementById('chat-messages').scrollHeight;
+                                } else if (data.type === 'grep_result') {
+                                    addMessage(`<strong>Grep Results:</strong><pre>${escapeHtml(data.content)}</pre>`, 'assistant');
+                                } else if (data.type === 'error') {
+                                    addMessage(data.content, 'error');
+                                }
+                            } catch (e) {
+                                // Ignore parsing errors for incomplete chunks
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                addMessage(`Error: ${error.message}. Make sure the server is running on port 3002.`, 'error');
+            }
+        }
+
+        async function indexSampleFiles() {
+            const datasetUuid = document.getElementById('dataset-uuid').value;
+
+            if (!datasetUuid) {
+                addMessage('Please enter a Dataset UUID first!', 'error');
+                return;
+            }
+
+            addMessage('Indexing sample files...', 'system');
+
+            const sampleFiles = [
+                {
+                    name: 'app.js',
+                    content: 'function main() {\n  console.log("Hello World");\n  if (error) {\n    console.error("An error occurred");\n  }\n}',
+                    tags: []
+                },
+                {
+                    name: 'utils.js',
+                    content: 'function calculateSum(a, b) {\n  return a + b;\n}\n\nfunction handleError(err) {\n  console.error("Error:", err.message);\n}',
+                    tags: ['private']
+                },
+                {
+                    name: 'config.json',
+                    content: '{\n  "appName": "GrepDB Demo",\n  "version": "1.0.0",\n  "debug": true\n}',
+                    tags: ['user_auth']
+                }
+            ];
+
+            try {
+                const response = await fetch(`${SERVER_URL}/update_workflow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataset_uuid: datasetUuid,
+                        files: sampleFiles
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    addMessage(`✅ Successfully indexed ${result.success} files! You can now search through them.`, 'system');
+                } else {
+                    addMessage(`Error indexing files: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                addMessage(`Error: ${error.message}. Make sure the server is running on port 3002.`, 'error');
+            }
+        }
+
+        function searchForErrors() {
+            document.getElementById('chat-input').value = 'Search for any error messages in the indexed files';
+            sendMessage();
+        }
+
+        function searchForFunctions() {
+            document.getElementById('chat-input').value = 'Find all function definitions in the codebase';
+            sendMessage();
+        }
+
+        function clearChat() {
+            const messagesDiv = document.getElementById('chat-messages');
+            messagesDiv.innerHTML = '<div class="message system">Chat cleared. Ready for new conversation!</div>';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function checkServerStatus() {
+            const serverStatusEl = document.getElementById('server-status');
+            const grepdbStatusEl = document.getElementById('grepdb-status');
+            const statusIndicator = document.getElementById('status-indicator');
+
+            try {
+                const response = await fetch(`${SERVER_URL}/health`);
+                if (response.ok) {
+                    serverStatusEl.textContent = 'Online ✅';
+                    serverStatusEl.style.color = '#10b981';
+                    statusIndicator.classList.remove('error');
+                } else {
+                    throw new Error('Server not responding');
+                }
+            } catch (error) {
+                serverStatusEl.textContent = 'Offline ❌';
+                serverStatusEl.style.color = '#ef4444';
+                statusIndicator.classList.add('error');
+            }
+
+            // Check GrepDB (this might not have a health endpoint, so we just show it's expected to be running)
+            grepdbStatusEl.textContent = 'Port 8080';
+            grepdbStatusEl.style.color = '#6b7280';
+        }
+
+        // Check server status on load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkServerStatus();
+            addMessage('Welcome! This chat interface connects to your local GrepDB server.', 'system');
+            addMessage('Make sure your server is running on port 3002 with a valid Anthropic API key.', 'system');
+            addMessage('Click "Index Sample Files" to add some test data, then start chatting!', 'system');
+        });
+
+        // Check server status every 30 seconds
+        setInterval(checkServerStatus, 30000);
+    </script>
+</body>
+</html>

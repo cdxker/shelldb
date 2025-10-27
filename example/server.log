@@ -1,0 +1,8 @@
+Server running on http://localhost:3001
+GrepDB URL: http://localhost:8080
+Anthropic API Key: Configured
+
+Endpoints:
+  POST /assistant - Send messages to AI assistant with grep capabilities
+  POST /update_workflow - Index files in GrepDB
+  GET /health - Health check
